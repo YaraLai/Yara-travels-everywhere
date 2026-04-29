@@ -1,0 +1,17 @@
+@import "tailwindcss";
+
+@media print {
+  .bottom-nav {
+    display: none !important;
+  }
+  body, main {
+    background: white !important;
+    overflow: visible !important;
+  }
+  .overflow-y-auto {
+    overflow: visible !important;
+  }
+  main {
+    padding-bottom: 0 !important;
+  }
+}
