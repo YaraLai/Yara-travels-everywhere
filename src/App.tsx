@@ -320,6 +320,7 @@ export default function App() {
 
   return (
     <div className="min-h-screen">
+      <div className="print:hidden">
       {/* 頂部狀態列 */}
       <header className="p-6 pb-2 sticky top-0 z-40 bg-[#F7F4EB]/80 backdrop-blur-sm">
         <div className="flex justify-between items-center">
@@ -708,10 +709,100 @@ export default function App() {
           </button>
         ))}
       </nav>
+      </div>
+
+      {/* 列印專用 (PDF 排版) */}
+      <div className="hidden print:block bg-white text-black p-8 min-h-screen">
+        <div className="text-center mb-12">
+          <h1 className="text-4xl font-bold handwriting text-[#5C8D50]">🌲 森之小旅</h1>
+          <p className="text-sm opacity-60 font-bold uppercase tracking-widest mt-1">Our Adventure Journal</p>
+        </div>
+
+        {/* 行程表 */}
+        <div className="mb-12">
+          <h2 className="text-2xl font-bold mb-6 pb-2 border-b-2 border-gray-200 handwriting flex items-center">
+            <span className="text-3xl mr-2">📅</span> 行程總覽
+          </h2>
+          <div className="space-y-8">
+            {data.days.map((day: any, index: number) => (
+              <div key={index} className="break-inside-avoid relative">
+                <h3 className="font-bold text-lg bg-[#E0E5D5] inline-block px-4 py-1.5 rounded-lg mb-4 text-[#5C6E4B]">
+                  DAY {index + 1} <span className="ml-2 font-normal text-sm">{day.date}</span>
+                </h3>
+                <div className="pl-4 border-l-2 border-[#789262] space-y-5">
+                  {(data.schedule[index] || []).length > 0 ? (
+                    data.schedule[index].map((item: any, idx: number) => (
+                      <div key={idx} className="flex flex-col mb-4">
+                        <div className="flex items-center space-x-3 mb-1">
+                          <span className="text-[10px] font-bold px-2 py-0.5 rounded text-white" style={{ backgroundColor: getCategoryColor(item.type) }}>
+                            {item.type}
+                          </span>
+                          <span className="text-sm font-mono font-bold text-gray-500 w-12">{item.time}</span>
+                          <span className="font-bold text-base text-gray-800">{item.title}</span>
+                        </div>
+                        {item.note && <p className="text-sm text-gray-500 pl-[92px]">{item.note}</p>}
+                      </div>
+                    ))
+                  ) : (
+                    <p className="text-sm text-gray-400 italic">無行程</p>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* 記帳紀錄 */}
+        <div className="break-before-page pt-4">
+          <h2 className="text-2xl font-bold mb-6 pb-2 border-b-2 border-gray-200 handwriting flex items-center">
+            <span className="text-3xl mr-2">💰</span> 記帳紀錄
+          </h2>
+          
+          <div className="bg-gray-50 p-6 rounded-xl mb-6 text-center border-2 border-dashed border-gray-200">
+            <span className="text-sm font-bold text-gray-500">旅行總支出</span>
+            <div className="text-3xl font-black mt-2 text-[#5C6E4B] handwriting">
+              <span className="text-lg">{data.settings.targetCurrency}</span> {formatNumber(Math.round(getTotalExpense()))}
+            </div>
+            <div className="text-sm font-bold text-gray-400 mt-1">
+              約 NT$ {formatNumber(Math.round(getTotalExpense() * data.settings.exchangeRate))}
+            </div>
+          </div>
+
+          <table className="w-full text-left border-collapse mt-8">
+            <thead>
+              <tr className="border-b-2 border-gray-300">
+                <th className="p-3 font-bold text-sm text-gray-600">日期</th>
+                <th className="p-3 font-bold text-sm text-gray-600">項目</th>
+                <th className="p-3 font-bold text-sm text-right text-gray-600">花費 ({data.settings.targetCurrency})</th>
+                <th className="p-3 font-bold text-sm text-right text-gray-600">折合台幣</th>
+              </tr>
+            </thead>
+            <tbody>
+              {data.expenses.map((ex: any) => (
+                <tr key={ex.id} className="border-b border-gray-200">
+                  <td className="p-3 text-sm text-gray-600">{ex.date}</td>
+                  <td className="p-3">
+                    <div className="flex items-center space-x-2">
+                       <span className="w-6 text-center">{ex.icon}</span>
+                       <span className="font-bold text-sm text-gray-800">{ex.title}</span>
+                    </div>
+                  </td>
+                  <td className="p-3 text-sm text-right font-mono font-bold text-gray-700">
+                    {ex.currency !== 'NTD' ? `${getCurrencySymbol()} ${formatNumber(ex.amount)}` : '-'}
+                  </td>
+                  <td className="p-3 text-sm text-right font-mono font-bold text-gray-500">
+                    NT$ {formatNumber(Math.round(ex.currency === 'NTD' ? ex.amount : ex.amount * data.settings.exchangeRate))}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
 
       {/* PIN 碼彈窗 */}
       {pin.show && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-black/60 backdrop-blur-md">
+        <div className="print:hidden fixed inset-0 z-[100] flex items-center justify-center p-6 bg-black/60 backdrop-blur-md">
           <div className="ac-card p-8 w-full max-w-xs text-center">
             <h3 className="font-bold text-xl mb-6 handwriting">🔒 秘密保護</h3>
             <div className="flex justify-center space-x-4 mb-8">
@@ -735,7 +826,7 @@ export default function App() {
 
       {/* 通用 Confirm Dialog */}
       {confirmDialog.show && (
-        <div className="fixed inset-0 z-[120] flex items-center justify-center p-4">
+        <div className="print:hidden fixed inset-0 z-[120] flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-black/40" onClick={() => setConfirmDialog(prev => ({ ...prev, show: false }))} />
           <div className="ac-card w-full max-w-sm bg-white p-6 rounded-[30px] z-10 animate-slide-up text-center">
             <h3 className="text-xl font-bold mb-4">{confirmDialog.message}</h3>
@@ -749,7 +840,7 @@ export default function App() {
 
       {/* 通用新增 Modal */}
       {modal.show && (
-        <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center">
+        <div className="print:hidden fixed inset-0 z-[100] flex items-end sm:items-center justify-center">
           <div className="absolute inset-0 bg-black/40" onClick={() => setModal({ ...modal, show: false })} />
           <div className="ac-card w-full max-w-lg bg-white p-6 rounded-t-[40px] sm:rounded-[40px] z-10 animate-slide-up">
             <div className="w-12 h-1.5 bg-gray-200 rounded-full mx-auto mb-6" />
