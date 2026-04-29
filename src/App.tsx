@@ -10,7 +10,8 @@ const CURRENCY_OPTIONS: Record<string, { name: string; symbol: string; rate: num
   KRW: { name: '韓元', symbol: '₩', rate: 0.024 },
   USD: { name: '美金', symbol: '$', rate: 32.5 },
   EUR: { name: '歐元', symbol: '€', rate: 35.2 },
-  HKD: { name: '港幣', symbol: 'HK$', rate: 4.15 }
+  HKD: { name: '港幣', symbol: 'HK$', rate: 4.15 },
+  NTD: { name: '台幣', symbol: 'NT$', rate: 1 }
 };
 
 const DEFAULT_DATA = {
@@ -71,12 +72,6 @@ export default function App() {
   useEffect(() => {
     localStorage.setItem('mori_travel_v2', JSON.stringify(data));
   }, [data]);
-
-  const getCountdown = () => {
-    const travelDate = new Date('2026-04-15');
-    const diff = travelDate.getTime() - new Date().getTime();
-    return Math.max(0, Math.ceil(diff / (1000 * 60 * 60 * 24)));
-  };
 
   const clearAllData = () => {
     setConfirmDialog({
@@ -331,11 +326,6 @@ export default function App() {
           <div>
             <h1 className="text-2xl font-bold handwriting text-[#5C8D50] flex items-center">🌲 森之小旅</h1>
             <p className="text-[10px] opacity-60 font-bold uppercase tracking-widest">Our Adventure Journal</p>
-          </div>
-          <div className="flex flex-col items-end">
-            <div className="ac-card bg-[#FFD966] border-[#F1C232] px-3 py-1 text-xs font-bold shadow-[2px_2px_0px_#D1A100]">
-              倒數 <span className="text-base">{getCountdown()}</span> 天
-            </div>
           </div>
         </div>
       </header>
