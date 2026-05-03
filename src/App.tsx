@@ -1,8 +1,3 @@
-/**
- * @license
- * SPDX-License-Identifier: Apache-2.0
- */
-
 import React, { useState, useEffect } from 'react';
 
 const CURRENCY_OPTIONS: Record<string, { name: string; symbol: string; rate: number }> = {
@@ -19,11 +14,11 @@ const DEFAULT_DATA = {
   days: [{ date: '04/15' }, { date: '04/16' }, { date: '04/17' }, { date: '04/18' }, { date: '04/19' }],
   schedule: [
     [
-      { type: '交通', time: '08:30', title: '桃園機場 第一航廈', note: '搭乘 CI104 航班', category: 'transport' },
-      { type: '美食', time: '13:00', title: '成田機場 壽司店', note: '抵達第一餐！', category: 'food' },
-      { type: '景點', time: '15:30', title: '淺草寺雷門', note: '大燈籠拍照', category: 'spot' }
+      { type: '交通', time: '08:30', title: '桃園機場 第一航廈', note: '搭乘 CI104 航班' },
+      { type: '美食', time: '13:00', title: '成田機場 壽司店', note: '抵達第一餐！' },
+      { type: '景點', time: '15:30', title: '淺草寺雷門', note: '大燈籠拍照' }
     ],
-    [{ type: '景點', time: '09:00', title: '東京迪士尼樂園', note: '整天都在這！', category: 'spot' }],
+    [{ type: '景點', time: '09:00', title: '東京迪士尼樂園', note: '整天都在這！' }],
     [], [], []
   ],
   bookings: [
@@ -65,7 +60,6 @@ export default function App() {
   const [activeTab, setActiveTab] = useState('schedule');
   const [selectedDayIndex, setSelectedDayIndex] = useState(0);
   const [planType, setPlanType] = useState<'pack' | 'buy'>('pack');
-  const [pin, setPin] = useState({ show: false, input: '' });
   const [modal, setModal] = useState<any>({ show: false, type: '', title: '', form: {} });
   const [confirmDialog, setConfirmDialog] = useState({ show: false, message: '', onConfirm: () => {} });
 
@@ -200,6 +194,63 @@ export default function App() {
     });
   };
 
+  const deleteBooking = (id: number) => {
+    setConfirmDialog({
+      show: true,
+      message: '確定要刪除這筆預訂資料嗎？',
+      onConfirm: () => {
+        setData((prev: any) => {
+          const next = { ...prev };
+          next.bookings = next.bookings.filter((b: any) => b.id !== id);
+          next.expenses = next.expenses.filter((ex: any) => ex.bookingId !== id);
+          return next;
+        });
+        setConfirmDialog(prev => ({ ...prev, show: false }));
+        setModal(prev => ({ ...prev, show: false }));
+      }
+    });
+  };
+
+  const deletePackItem = (idx: number) => {
+    setConfirmDialog({
+      show: true,
+      message: '確定要刪除這個行李項目嗎？',
+      onConfirm: () => {
+        setData((prev: any) => {
+          const next = { ...prev };
+          const newList = [...next.plans.pack];
+          newList.splice(idx, 1);
+          next.plans = { ...next.plans, pack: newList };
+          return next;
+        });
+        setConfirmDialog(prev => ({ ...prev, show: false }));
+        setModal(prev => ({ ...prev, show: false }));
+      }
+    });
+  };
+
+  const deleteBuyItem = (idx: number) => {
+    setConfirmDialog({
+      show: true,
+      message: '確定要刪除這個清單項目嗎？',
+      onConfirm: () => {
+        setData((prev: any) => {
+          const next = { ...prev };
+          const itemToDelete = next.plans.buy[idx];
+          const newList = [...next.plans.buy];
+          newList.splice(idx, 1);
+          next.plans = { ...next.plans, buy: newList };
+          if (itemToDelete.expenseId) {
+            next.expenses = next.expenses.filter((ex: any) => ex.id !== itemToDelete.expenseId);
+          }
+          return next;
+        });
+        setConfirmDialog(prev => ({ ...prev, show: false }));
+        setModal(prev => ({ ...prev, show: false }));
+      }
+    });
+  };
+
   const changeTargetCurrency = (code: string) => {
     setData((prev: any) => ({
       ...prev,
@@ -207,38 +258,22 @@ export default function App() {
     }));
   };
 
-  const handlePinInput = (n: number) => {
-    if (pin.input.length < 3) {
-      const newInput = pin.input + n;
-      if (newInput.length === 3) {
-        if (newInput === '007') {
-          setPin({ show: false, input: '' });
-          // execute callback if needed
-        } else {
-          setPin({ show: true, input: '' });
-        }
-      } else {
-        setPin({ ...pin, input: newInput });
-      }
-    }
-  };
-
   const openAddModal = (type: string, itemToEdit?: any, index?: number, originalDayIndex?: number) => {
+    const isEditing = !!itemToEdit;
     if (type === 'expense') {
       const today = new Date().toISOString().split('T')[0];
-      setModal({ show: true, type, title: '花費', form: { icon: '🍜', title: '', amount: '', currency: 'TARGET', date: today, payer: '自己', split: '全體' } });
+      setModal({ show: true, type, title: '花費', isEditing, editIndex: index, form: isEditing ? { ...itemToEdit } : { icon: '🍜', title: '', amount: '', currency: 'TARGET', date: today, payer: '自己', split: '全體' } });
     } else if (type === 'schedule') {
-      const isEditing = !!itemToEdit;
       setModal({ show: true, type, title: '行程項目', isEditing, editIndex: index, originalDayIndex, form: isEditing ? { ...itemToEdit, dayIndex: originalDayIndex } : { type: '景點', time: '12:00', title: '', note: '', dayIndex: selectedDayIndex } });
     } else if (type === 'buy') {
-      setModal({ show: true, type, title: '清單項目', form: { icon: '🛍️', store: '', item: '', budget: '', currency: 'TARGET', link: '', done: false } });
+      setModal({ show: true, type, title: '清單項目', isEditing, editIndex: index, form: isEditing ? { ...itemToEdit } : { icon: '🛍️', store: '', item: '', budget: '', currency: 'TARGET', link: '', done: false } });
     } else if (type === 'booking') {
       const now = new Date();
       now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
       const currentDatetime = now.toISOString().slice(0, 16);
-      setModal({ show: true, type, title: '預訂資料', form: { type: 'hotel', icon: '🏨', title: '', sub: '', price: '', currency: 'TARGET', datetime: currentDatetime } });
+      setModal({ show: true, type, title: '預訂資料', isEditing, editIndex: index, form: isEditing ? { ...itemToEdit } : { type: 'hotel', icon: '🏨', title: '', sub: '', price: '', currency: 'TARGET', datetime: currentDatetime } });
     } else if (type === 'pack') {
-      setModal({ show: true, type, title: '行李', form: { text: '', done: false } });
+      setModal({ show: true, type, title: '行李', isEditing, editIndex: index, form: isEditing ? { ...itemToEdit } : { text: '', done: false } });
     }
   };
 
@@ -264,7 +299,11 @@ export default function App() {
     setData((prev: any) => {
       const next = { ...prev };
       if (modal.type === 'expense') {
-        next.expenses = [{ ...modal.form, id: Date.now() }, ...next.expenses];
+        if (modal.isEditing) {
+          next.expenses = next.expenses.map((ex: any, idx: number) => idx === modal.editIndex ? { ...modal.form } : ex);
+        } else {
+          next.expenses = [{ ...modal.form, id: Date.now() }, ...next.expenses];
+        }
       } else if (modal.type === 'schedule') {
         const newSchedule = [...next.schedule];
         const targetDayIndex = modal.form.dayIndex !== undefined ? Number(modal.form.dayIndex) : selectedDayIndex;
@@ -293,25 +332,87 @@ export default function App() {
          newSchedule[targetDayIndex].sort((a, b) => (a.time || '').localeCompare(b.time || ''));
         next.schedule = newSchedule;
       } else if (modal.type === 'buy') {
-        next.plans = { ...next.plans, buy: [...next.plans.buy, { ...modal.form }] };
+        if (modal.isEditing) {
+          const newList = [...next.plans.buy];
+          newList[modal.editIndex] = { ...modal.form };
+          next.plans = { ...next.plans, buy: newList };
+          
+          if (modal.form.expenseId) {
+            next.expenses = next.expenses.map((ex: any) => {
+              if (ex.id === modal.form.expenseId) {
+                 return {
+                   ...ex,
+                   icon: modal.form.icon || '🛍️',
+                   title: modal.form.item,
+                   amount: modal.form.budget || 0,
+                   currency: modal.form.currency || 'TARGET'
+                 };
+              }
+              return ex;
+            });
+          }
+        } else {
+          next.plans = { ...next.plans, buy: [...next.plans.buy, { ...modal.form }] };
+        }
       } else if (modal.type === 'booking') {
-        const newBookingId = Date.now();
-        next.bookings = [...next.bookings, { ...modal.form, id: newBookingId }];
-        if (modal.form.price) {
-          next.expenses = [{
-            id: newBookingId + 1,
-            icon: modal.form.icon || '🎫',
-            title: modal.form.title || modal.form.code || '預訂項目',
-            amount: Number(modal.form.price) || 0,
-            currency: modal.form.currency || 'TARGET',
-            date: next.days[0]?.date || '',
-            payer: '預訂',
-            split: '全體',
-            bookingId: newBookingId
-          }, ...next.expenses];
+        if (modal.isEditing) {
+          next.bookings = next.bookings.map((b: any) => b.id === modal.form.id ? { ...modal.form } : b);
+          if (modal.form.price) {
+            const existingExpense = next.expenses.find((ex: any) => ex.bookingId === modal.form.id);
+            if (existingExpense) {
+              next.expenses = next.expenses.map((ex: any) => {
+                if (ex.bookingId === modal.form.id) {
+                  return {
+                    ...ex,
+                    icon: modal.form.icon || '🎫',
+                    title: modal.form.title || modal.form.code || '預訂項目',
+                    amount: Number(modal.form.price) || 0,
+                    currency: modal.form.currency || 'TARGET'
+                  };
+                }
+                return ex;
+              });
+            } else {
+                next.expenses = [{
+                id: Date.now(),
+                icon: modal.form.icon || '🎫',
+                title: modal.form.title || modal.form.code || '預訂項目',
+                amount: Number(modal.form.price) || 0,
+                currency: modal.form.currency || 'TARGET',
+                date: next.days[0]?.date || '',
+                payer: '預訂',
+                split: '全體',
+                bookingId: modal.form.id
+              }, ...next.expenses];
+            }
+          } else {
+            next.expenses = next.expenses.filter((ex: any) => ex.bookingId !== modal.form.id);
+          }
+        } else {
+          const newBookingId = Date.now();
+          next.bookings = [...next.bookings, { ...modal.form, id: newBookingId }];
+          if (modal.form.price) {
+            next.expenses = [{
+              id: newBookingId + 1,
+              icon: modal.form.icon || '🎫',
+              title: modal.form.title || modal.form.code || '預訂項目',
+              amount: Number(modal.form.price) || 0,
+              currency: modal.form.currency || 'TARGET',
+              date: next.days[0]?.date || '',
+              payer: '預訂',
+              split: '全體',
+              bookingId: newBookingId
+            }, ...next.expenses];
+          }
         }
       } else if (modal.type === 'pack') {
-        next.plans = { ...next.plans, [modal.type]: [...next.plans[modal.type], { ...modal.form }] };
+        if (modal.isEditing) {
+          const newList = [...next.plans.pack];
+          newList[modal.editIndex] = { ...modal.form };
+          next.plans = { ...next.plans, pack: newList };
+        } else {
+          next.plans = { ...next.plans, [modal.type]: [...next.plans[modal.type], { ...modal.form }] };
+        }
       }
       return next;
     });
@@ -436,8 +537,8 @@ export default function App() {
           <section className="animate-slide-up">
             <h2 className="text-xl font-bold handwriting mb-4">🎫 票券與憑證</h2>
             <div className="space-y-6">
-              {[...data.bookings].sort((a: any, b: any) => (a.datetime || a.fromDate || '').localeCompare(b.datetime || b.fromDate || '')).map((b: any) => (
-                <div key={b.id} className="relative">
+              {[...data.bookings].sort((a: any, b: any) => (a.datetime || a.fromDate || '').localeCompare(b.datetime || b.fromDate || '')).map((b: any, idx: number) => (
+                <div key={b.id} className="relative active:scale-[0.98] transition-transform cursor-pointer" onClick={() => openAddModal('booking', b, idx)}>
                   {b.type === 'flight' ? (
                     <div className="ac-card bg-[#F87171] text-white p-0 overflow-hidden relative shadow-[4px_4px_0px_#B91C1C]">
                       <div className="p-4 border-b border-dashed border-white/40 flex justify-between items-center">
@@ -586,22 +687,29 @@ export default function App() {
                   </button>
                 </div>
                 {data.plans[planType].map((item: any, idx: number) => (
-                  <label key={idx} className="ac-card p-4 flex items-center space-x-4 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={item.done}
-                      onChange={() => togglePlanItem(planType, idx)}
-                      className="w-6 h-6 rounded-lg border-2 border-[#789262] accent-[#789262]"
-                    />
-                    <div className="flex-1 flex justify-between items-center">
-                      <span className={`font-bold text-sm ${item.done ? 'line-through opacity-30' : ''}`}>{item.text}</span>
-                      {item.assignee && (
-                        <span className="text-[10px] bg-gray-100 px-2 py-0.5 rounded text-gray-500 font-bold whitespace-nowrap ml-2">
-                          {item.assignee}
-                        </span>
-                      )}
-                    </div>
-                  </label>
+                  <div key={idx} className="flex items-center space-x-2">
+                    <label className="ac-card p-4 flex items-center space-x-4 cursor-pointer flex-1">
+                      <input
+                        type="checkbox"
+                        checked={item.done}
+                        onChange={() => togglePlanItem(planType, idx)}
+                        className="w-6 h-6 rounded-lg border-2 border-[#789262] accent-[#789262]"
+                      />
+                      <div className="flex-1 flex justify-between items-center" onClick={(e) => {
+                         if (e.target === e.currentTarget || (e.target as HTMLElement).tagName === 'SPAN') {
+                            e.preventDefault();
+                            openAddModal('pack', item, idx);
+                         }
+                      }}>
+                        <span className={`font-bold text-sm ${item.done ? 'line-through opacity-30' : ''}`}>{item.text}</span>
+                        {item.assignee && (
+                          <span className="text-[10px] bg-gray-100 px-2 py-0.5 rounded text-gray-500 font-bold whitespace-nowrap ml-2">
+                            {item.assignee}
+                          </span>
+                        )}
+                      </div>
+                    </label>
+                  </div>
                 ))}
               </div>
             )}
@@ -615,50 +723,54 @@ export default function App() {
                   </button>
                 </div>
 
-                {getSortedBuyList().map((item: any, idx: number) => (
-                  <div key={idx} className={`ac-card p-4 flex flex-col space-y-3 relative overflow-hidden ${item.done ? 'opacity-50' : ''}`}>
-                    <div className="flex justify-between items-start">
-                      <div className="flex items-center space-x-3">
-                        <input
-                          type="checkbox"
-                          checked={item.done}
-                          onChange={() => toggleBuyItem(item)}
-                          className="w-5 h-5 rounded border-2 border-[#789262] accent-[#789262] cursor-pointer"
-                        />
+                {getSortedBuyList().map((item: any, idx: number) => {
+                  const originalIndex = data.plans.buy.findIndex((i: any) => i === item);
+                  return (
+                    <div key={idx} className={`ac-card p-4 flex flex-col space-y-3 relative overflow-hidden active:scale-[0.98] transition-transform cursor-pointer ${item.done ? 'opacity-50' : ''}`} onClick={() => openAddModal('buy', item, originalIndex)}>
+                      <div className="flex justify-between items-start">
+                        <div className="flex items-center space-x-3">
+                          <input
+                            type="checkbox"
+                            checked={item.done}
+                            onClick={(e) => e.stopPropagation()}
+                            onChange={() => toggleBuyItem(item)}
+                            className="w-5 h-5 rounded border-2 border-[#789262] accent-[#789262] cursor-pointer"
+                          />
+                          <div>
+                            <span className="text-[10px] font-bold bg-[#E0E5D5] px-2 py-0.5 rounded text-[#5C6E4B]">{item.store || '未分類店家'}</span>
+                            <h4 className={`font-bold text-base mt-1 flex items-center space-x-1 ${item.done ? 'line-through' : ''}`}>
+                              {item.icon && <span>{item.icon}</span>}
+                              <span>{item.item}</span>
+                            </h4>
+                          </div>
+                        </div>
+                        {item.link && (
+                          <a href={item.link} target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()} className="w-8 h-8 bg-blue-50 text-blue-500 rounded-full flex items-center justify-center text-sm">
+                            🔗
+                          </a>
+                        )}
+                      </div>
+                      <div className="flex justify-between items-center pt-2 border-t border-dashed border-gray-100">
                         <div>
-                          <span className="text-[10px] font-bold bg-[#E0E5D5] px-2 py-0.5 rounded text-[#5C6E4B]">{item.store || '未分類店家'}</span>
-                          <h4 className={`font-bold text-base mt-1 flex items-center space-x-1 ${item.done ? 'line-through' : ''}`}>
-                            {item.icon && <span>{item.icon}</span>}
-                            <span>{item.item}</span>
-                          </h4>
+                          <p className="text-[10px] font-bold opacity-40 uppercase">預算估計</p>
+                          <p className="font-mono font-bold text-sm">
+                            {item.currency === 'NTD' ? (
+                              <><span className="text-[#789262]">NT$</span> <span>{formatNumber(item.budget)}</span></>
+                            ) : (
+                              <><span className="text-[#789262]">{getCurrencySymbol()}</span> <span>{formatNumber(item.budget)}</span></>
+                            )}
+                          </p>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-[10px] font-bold opacity-40 uppercase">{item.currency === 'NTD' ? `約 ${data.settings.targetCurrency}` : '約台幣'}</p>
+                          <p className="font-mono font-bold text-sm text-amber-600">
+                            {item.currency === 'NTD' ? getCurrencySymbol() : 'NT$'} <span>{formatNumber(Math.round(item.currency === 'NTD' ? item.budget / (data.settings.exchangeRate || 1) : item.budget * data.settings.exchangeRate))}</span>
+                          </p>
                         </div>
                       </div>
-                      {item.link && (
-                        <a href={item.link} target="_blank" rel="noreferrer" className="w-8 h-8 bg-blue-50 text-blue-500 rounded-full flex items-center justify-center text-sm">
-                          🔗
-                        </a>
-                      )}
                     </div>
-                    <div className="flex justify-between items-center pt-2 border-t border-dashed border-gray-100">
-                      <div>
-                        <p className="text-[10px] font-bold opacity-40 uppercase">預算估計</p>
-                        <p className="font-mono font-bold text-sm">
-                          {item.currency === 'NTD' ? (
-                            <><span className="text-[#789262]">NT$</span> <span>{formatNumber(item.budget)}</span></>
-                          ) : (
-                            <><span className="text-[#789262]">{getCurrencySymbol()}</span> <span>{formatNumber(item.budget)}</span></>
-                          )}
-                        </p>
-                      </div>
-                      <div className="text-right">
-                        <p className="text-[10px] font-bold opacity-40 uppercase">{item.currency === 'NTD' ? `約 ${data.settings.targetCurrency}` : '約台幣'}</p>
-                        <p className="font-mono font-bold text-sm text-amber-600">
-                          {item.currency === 'NTD' ? getCurrencySymbol() : 'NT$'} <span>{formatNumber(Math.round(item.currency === 'NTD' ? item.budget / (data.settings.exchangeRate || 1) : item.budget * data.settings.exchangeRate))}</span>
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </section>
@@ -800,30 +912,6 @@ export default function App() {
         </div>
       </div>
 
-      {/* PIN 碼彈窗 */}
-      {pin.show && (
-        <div className="print:hidden fixed inset-0 z-[100] flex items-center justify-center p-6 bg-black/60 backdrop-blur-md">
-          <div className="ac-card p-8 w-full max-w-xs text-center">
-            <h3 className="font-bold text-xl mb-6 handwriting">🔒 秘密保護</h3>
-            <div className="flex justify-center space-x-4 mb-8">
-              {[1, 2, 3].map((i) => (
-                <div key={i} className="w-12 h-16 border-b-4 border-[#789262] text-3xl font-black flex items-center justify-center handwriting">
-                  {pin.input.length >= i ? '●' : ''}
-                </div>
-              ))}
-            </div>
-            <div className="grid grid-cols-3 gap-3">
-              {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((n) => (
-                <button key={n} onClick={() => handlePinInput(n)} className="ac-card p-4 font-bold text-xl active:bg-gray-100">{n}</button>
-              ))}
-              <div />
-              <button onClick={() => handlePinInput(0)} className="ac-card p-4 font-bold text-xl active:bg-gray-100">0</button>
-              <button onClick={() => setPin({ show: false, input: '' })} className="ac-card p-4 font-bold text-sm bg-red-50 text-red-500">取消</button>
-            </div>
-          </div>
-        </div>
-      )}
-
       {/* 通用 Confirm Dialog */}
       {confirmDialog.show && (
         <div className="print:hidden fixed inset-0 z-[120] flex items-center justify-center p-4">
@@ -844,7 +932,7 @@ export default function App() {
           <div className="absolute inset-0 bg-black/40" onClick={() => setModal({ ...modal, show: false })} />
           <div className="ac-card w-full max-w-lg bg-white p-6 rounded-t-[40px] sm:rounded-[40px] z-10 animate-slide-up">
             <div className="w-12 h-1.5 bg-gray-200 rounded-full mx-auto mb-6" />
-            <h3 className="text-xl font-bold mb-6 handwriting">新增{modal.title}</h3>
+            <h3 className="text-xl font-bold mb-6 handwriting">{modal.isEditing ? '調整' : '新增'}{modal.title}</h3>
             
             <div className="space-y-4 mb-8">
               {modal.type === 'expense' && (
@@ -950,9 +1038,20 @@ export default function App() {
                  </div>
               )}
             </div>
-            {modal.type === 'schedule' && modal.isEditing ? (
+            {modal.isEditing ? (
               <div className="flex space-x-3">
-                <button onClick={deleteScheduleItem} className="w-1/3 py-4 bg-red-50 text-red-500 rounded-full font-bold text-lg">刪除</button>
+                <button 
+                  onClick={() => {
+                    if (modal.type === 'schedule') deleteScheduleItem();
+                    else if (modal.type === 'booking') deleteBooking(modal.form.id);
+                    else if (modal.type === 'pack') deletePackItem(modal.editIndex);
+                    else if (modal.type === 'buy') deleteBuyItem(modal.editIndex);
+                    else if (modal.type === 'expense') deleteExpense(modal.form.id);
+                  }} 
+                  className="w-1/3 py-4 bg-red-50 text-red-500 rounded-full font-bold text-lg"
+                >
+                  刪除
+                </button>
                 <button onClick={saveModalData} className="w-2/3 py-4 ac-btn-primary rounded-full font-bold text-lg">確定儲存！</button>
               </div>
             ) : (
